@@ -5,25 +5,43 @@ document.addEventListener('DOMContentLoaded', () => {
         // Librerie
         window.jsPDF = window.jspdf.jsPDF;
 
-        // Input
+        // Input Dati Cliente
+        const inClientName = document.getElementById('client-name');
+        const inClientAddress = document.getElementById('client-address');
         const inConsumoF1 = document.getElementById('consumo-f1');
         const inConsumoF2 = document.getElementById('consumo-f2');
         const inConsumoF3 = document.getElementById('consumo-f3');
+        
+        // Input Progetto
         const inProduzioneKwhKwp = document.getElementById('produzione-kwh-kwp');
         const inAutoconsumoPerc = document.getElementById('autoconsumo-perc-desiderata');
+        
+        // Input Impianto
         const inPotenzaInstallata = document.getElementById('potenza-pv-installata');
         const inPotenzaInverter = document.getElementById('potenza-inverter-installato');
         const inAccumuloInstallato = document.getElementById('accumulo-installato');
         const inCostoImpianto = document.getElementById('costo-totale-impianto');
+        
+        // Input Finanziari
         const inCostoEnergIA = document.getElementById('costo-energia');
         const inCostiFissi = document.getElementById('costi-fissi-bolletta');
         const inInflazione = document.getElementById('inflazione-annua');
         const inDegrado = document.getElementById('degrado-annuo');
+        
+        // Input O&M (NUOVI)
+        const inCostoManutenzione = document.getElementById('costo-manutenzione-annua');
+        const inCostoSostituzioneInverter = document.getElementById('costo-sostituzione-inverter');
+        const inAnnoSostituzioneInverter = document.getElementById('anno-sostituzione-inverter');
+        
+        // Input Incentivi
         const inPercPNRR = document.getElementById('perc-pnrr');
         const inTariffaCER = document.getElementById('tariffa-cer');
         const inPercCondivisa = document.getElementById('perc-energia-condivisa-cer');
         const inPrezzoRID = document.getElementById('prezzo-rid');
-        const allInputs = document.querySelectorAll('#calculator-form input[type="number"]');
+
+        // Liste Input
+        const allNumberInputs = document.querySelectorAll('#calculator-form input[type="number"]');
+        const allTextInputs = document.querySelectorAll('#calculator-form input[type="text"]');
 
         // Output UI
         const outConsumoAnnuoTotale = document.getElementById('consumo-annuo-totale');
@@ -70,12 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Valori di Default
         const defaultValues = {
+            'client-name': '', 'client-address': '',
             'consumo-f1': '1500', 'consumo-f2': '1800', 'consumo-f3': '1700',
             'produzione-kwh-kwp': '1300', 'autoconsumo-perc-desiderata': '60',
             'potenza-pv-installata': '6', 'potenza-inverter-installato': '6',
             'accumulo-installato': '0', 'costo-totale-impianto': '12000',
             'costo-energia': '0.25', 'costi-fissi-bolletta': '120',
             'inflazione-annua': '2', 'degrado-annuo': '0.5',
+            'costo-manutenzione-annua': '100', 'costo-sostituzione-inverter': '1500', 'anno-sostituzione-inverter': '12',
             'perc-pnrr': '40', 'tariffa-cer': '0.11',
             'perc-energia-condivisa-cer': '70', 'prezzo-rid': '0.08'
         };
@@ -126,9 +146,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fattoreDegrado = Math.pow(1 - inputs.degradoAnnua, anno - 1);
                 const fattoreInflazione = Math.pow(1 + inputs.inflazioneAnnua, anno - 1);
                 
+                // Calcolo Benefici
                 const risparmioQuestoAnno = risparmioAutoconsumo * fattoreDegrado * fattoreInflazione;
                 const guadagnoQuestoAnno = guadagnoImmissione * fattoreDegrado * fattoreInflazione;
-                const flussoDiCassa = risparmioQuestoAnno + guadagnoQuestoAnno;
+                
+                // Calcolo Costi O&M (NUOVO)
+                const costoManutenzioneQuestoAnno = inputs.costoManutenzione * fattoreInflazione;
+                const costoSostituzioneInverterQuestoAnno = (anno === inputs.annoSostituzioneInverter) 
+                    ? (inputs.costoSostituzioneInverter * fattoreInflazione) // Indicizza anche il costo dell'inverter
+                    : 0;
+                const costiOMTotaliQuestoAnno = costoManutenzioneQuestoAnno + costoSostituzioneInverterQuestoAnno;
+
+                // Calcolo Flusso Netto
+                const flussoDiCassa = risparmioQuestoAnno + guadagnoQuestoAnno - costiOMTotaliQuestoAnno;
                 flussoCumulato += flussoDiCassa;
 
                 if (anno === 1) {
@@ -144,6 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     anno,
                     risparmioQuestoAnno,
                     guadagnoQuestoAnno,
+                    costiOMTotaliQuestoAnno, // Aggiunto
                     flussoDiCassa,
                     flussoCumulato
                 });
@@ -201,7 +232,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 potenzaInverterInstallata: inputs.potenzaInverterInstallata,
                 autoconsumoPerc: inputs.autoconsumoPerc,
                 inflazioneAnnua: inputs.inflazioneAnnua * 100,
-                degradoAnnua: inputs.degradoAnnua * 100
+                degradoAnnua: inputs.degradoAnnua * 100,
+                // Dati O&M per Dettagli
+                costoManutenzione: inputs.costoManutenzione,
+                costoSostituzioneInverter: inputs.costoSostituzioneInverter,
+                annoSostituzioneInverter: inputs.annoSostituzioneInverter
             };
         }
 
@@ -229,7 +264,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 percEnergiaCondivisa: (parseFloat(inPercCondivisa.value) / 100) || 0,
                 prezzoRID: parseFloat(inPrezzoRID.value) || 0,
                 inflazioneAnnua: (parseFloat(inInflazione.value) / 100) || 0,
-                degradoAnnua: (parseFloat(inDegrado.value) / 100) || 0.005
+                degradoAnnua: (parseFloat(inDegrado.value) / 100) || 0.005,
+                // Input O&M
+                costoManutenzione: parseFloat(inCostoManutenzione.value) || 0,
+                costoSostituzioneInverter: parseFloat(inCostoSostituzioneInverter.value) || 0,
+                annoSostituzioneInverter: parseInt(inAnnoSostituzioneInverter.value) || 0
             };
         }
 
@@ -251,7 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
             outPanoCostoReale.textContent = `${formatCurrency(results.costoRealeCliente)}`;
             outPanoRisparmio1.textContent = `${formatCurrency(results.risparmioAutoconsumo)}`;
             outPanoGuadagno1.textContent = `${formatCurrency(results.guadagnoImmissione)}`;
-            outPanoTotale1.textContent = `${formatCurrency(results.totaleBeneficiPrimoAnno)}`;
+            // Il beneficio anno 1 ora è netto O&M
+            outPanoTotale1.textContent = `${formatCurrency(results.beneficioPrimoAnno)}`;
             
             // Massimale PNRR
             outMassimaleApplicato.textContent = `${results.massimale_kwp_dinamico.toLocaleString('it-IT')} €/kW (su ${results.potenzaPerCalcoloPNRR.toFixed(1)} kW)`;
@@ -278,6 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row.anno}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${formatCurrency(row.risparmioQuestoAnno)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${formatCurrency(row.guadagnoQuestoAnno)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">(${formatCurrency(row.costiOMTotaliQuestoAnno)})</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">${formatCurrency(row.flussoDiCassa)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${row.flussoCumulato < 0 ? 'text-red-600' : 'text-indigo-600'}">${formatCurrency(row.flussoCumulato)}</td>
                     </tr>
@@ -345,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
          */
         function validateInputs() {
             let isValid = true;
-            allInputs.forEach(input => {
+            allNumberInputs.forEach(input => {
                 input.classList.remove('input-invalid', 'input-valid');
                 if (input.min && parseFloat(input.value) < parseFloat(input.min)) {
                     input.classList.add('input-invalid');
@@ -359,6 +400,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     input.classList.add('input-valid');
                 }
+            });
+            // I campi testo (nome, indirizzo) non hanno validazione numerica
+            allTextInputs.forEach(input => {
+                input.classList.remove('input-invalid'); // Rimuovi eventuale stato di errore
             });
             return isValid;
         }
@@ -436,7 +481,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <li>Risparmio (da Autoconsumo): ${r.kwhAutoconsumati.toFixed(0)} kWh * ${r.costoQuotaEnergia.toFixed(2)} €/kWh = <strong>${r.risparmioAutoconsumo.toFixed(2)} €</strong></li>
                         <li>Guadagno (RID): ${r.kwhImmessi.toFixed(0)} kWh * ${r.prezzoRID.toFixed(2)} €/kWh = <strong>${r.guadagnoRID.toFixed(2)} €</strong></li>
                         <li>Guadagno (Premio CER): ${r.kwhCondivisi.toFixed(0)} kWh * ${r.tariffaCER.toFixed(2)} €/kWh = <strong>${r.guadagnoCER.toFixed(2)} €</strong></li>
-                        <li>Totale Benefici 1° Anno: ${r.risparmioAutoconsumo.toFixed(2)} + ${r.guadagnoImmissione.toFixed(2)} = <strong>${r.totaleBeneficiPrimoAnno.toFixed(2)} €</strong></li>
+                        <li>Totale Benefici Lordi 1° Anno: ${r.risparmioAutoconsumo.toFixed(2)} + ${r.guadagnoImmissione.toFixed(2)} = <strong>${r.totaleBeneficiPrimoAnno.toFixed(2)} €</strong></li>
+                        <li>Costo O&M 1° Anno: <strong>-${r.costoManutenzione.toFixed(2)} €</strong></li>
+                        <li>Beneficio Netto 1° Anno: <strong>${r.beneficioPrimoAnno.toFixed(2)} €</strong></li>
                     </ul>
                     <h4>3. Calcolo Incentivo PNRR</h4>
                     <ul>
@@ -447,10 +494,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <li>Importo Incentivo: ${r.costoAmmissibilePotenza.toFixed(2)} € * ${r.percPNRR * 100}% = <strong>${r.importoIncentivoPNRR.toFixed(2)} €</strong></li>
                         <li>Costo Reale Cliente: ${r.costoTotaleImpianto.toFixed(2)} € - ${r.importoIncentivoPNRR.toFixed(2)} € = <strong>${r.costoRealeCliente.toFixed(2)} €</strong></li>
                     </ul>
-                    <h4>4. Parametri Aggiuntivi</h4>
+                    <h4>4. Parametri O&M e Simulazione</h4>
                     <ul>
                         <li>Inflazione Annua: ${r.inflazioneAnnua}%</li>
                         <li>Degrado Annua Produzione: ${r.degradoAnnua}%</li>
+                        <li>Costo Manutenzione Annua (Base): ${r.costoManutenzione.toFixed(2)} €</li>
+                        <li>Costo Sostituzione Inverter (Base): ${r.costoSostituzioneInverter.toFixed(2)} € (all'anno ${r.annoSostituzioneInverter})</li>
                     </ul>
                 `;
                 return html;
@@ -487,6 +536,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!r || Object.keys(r).length === 0) {
                     throw new Error("Dati dei risultati non disponibili.");
                 }
+
+                // Leggi dati cliente (NUOVO)
+                const clientName = inClientName.value || 'Cliente';
+                const clientAddress = inClientAddress.value || '';
 
                 // --- IMPOSTAZIONI DI STILE PDF ---
                 const margin = 20;
@@ -560,16 +613,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 // ---- INIZIO PDF ----
+                
+                // Intestazione PDF Personalizzata (MODIFICATA)
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(h1Size);
                 pdf.setTextColor(colorIndigo);
-                pdf.text('SolarisFlow - Riepilogo', margin, cursorY);
+                pdf.text('SolarisFlow - Riepilogo Analisi', margin, cursorY);
                 cursorY += lineSpacing + 2;
+
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(h2Size - 2);
+                pdf.setTextColor(colorTextDark);
+                pdf.text(`Cliente: ${clientName}`, margin, cursorY);
+                cursorY += lineSpacing;
+
+                if (clientAddress) {
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(bodySize);
+                    pdf.setTextColor(colorTextGray);
+                    pdf.text(`Indirizzo: ${clientAddress}`, margin, cursorY);
+                    cursorY += lineSpacing + 2;
+                }
 
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(bodySize);
                 pdf.setTextColor(colorTextGray);
-                let introText = `Ecco l'analisi di fattibilità e il piano di rientro per il tuo impianto. Simulazione basata su: Inflazione ${r.inflazioneAnnua.toFixed(1)}%, Degrado ${r.degradoAnnua.toFixed(1)}%.`;
+                // Testo intro aggiornato con O&M
+                let introText = `Simulazione basata su: Inflazione ${r.inflazioneAnnua.toFixed(1)}%, Degrado ${r.degradoAnnua.toFixed(1)}%. Costi di manutenzione inclusi.`;
                 let splitIntro = pdf.splitTextToSize(introText, usableWidth);
                 pdf.text(splitIntro, margin, cursorY);
                 cursorY += (splitIntro.length * (lineSpacing * 0.7)) + sectionSpacing;
@@ -737,7 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFontSize(smallSize);
                 pdf.setFont('helvetica', 'normal');
                 pdf.setTextColor(colorTextGray);
-                pdf.text('RISPARMIO DA AUTOCONSUMO', margin + cardPadding, cardY + 8);
+                pdf.text('RISPARMIO (AUTOCONSUMO)', margin + cardPadding, cardY + 8);
                 pdf.setFontSize(h2Size);
                 pdf.setFont('helvetica', 'bold');
                 pdf.setTextColor(colorGreen);
@@ -763,15 +833,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFontSize(smallSize);
                 pdf.setFont('helvetica', 'normal');
                 pdf.setTextColor(colorTextGray);
-                pdf.text('TOTALE BENEFICI 1° ANNO', margin + cardPadding, cardY + 8);
+                pdf.text('TOTALE BENEFICI NETTI 1° ANNO (dopo O&M)', margin + cardPadding, cardY + 8);
                 pdf.setFontSize(h2Size);
                 pdf.setFont('helvetica', 'bold');
                 pdf.setTextColor(colorGreen);
-                pdf.text(formatCurrency(r.totaleBeneficiPrimoAnno), margin + cardPadding, cardY + 18);
+                pdf.text(formatCurrency(r.beneficioPrimoAnno), margin + cardPadding, cardY + 18);
                 
                 cursorY = cardY + cardHeight + sectionSpacing;
 
-                drawExplanationBox(`Come si generano i benefici:\n1. Risparmio: È l'energia che produci e consumi istantaneamente (${r.kwhAutoconsumati.toFixed(0)} kWh), evitando di acquistarla dalla rete.\n2. Guadagno: È l'energia che immetti in rete (${r.kwhImmessi.toFixed(0)} kWh), venduta tramite RID e incentivata dal premio CER.`);
+                drawExplanationBox(`Benefici: Il risparmio deriva dall'energia prodotta e consumata (${r.kwhAutoconsumati.toFixed(0)} kWh). Il guadagno deriva dall'energia immessa (${r.kwhImmessi.toFixed(0)} kWh). I costi O&M (${formatCurrency(r.costoManutenzione)}) sono già stati sottratti.`);
 
                 // --- SEZIONE 5: TEMPO DI RIENTRO ---
                 checkPageBreak(cardHeight + sectionSpacing);
@@ -808,7 +878,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 cursorY = cardY + cardHeight + sectionSpacing;
 
-                drawExplanationBox(`Tempo di Rientro: È il numero di anni necessari affinché i benefici totali (risparmi + guadagni) eguaglino il costo reale dell'investimento (${formatCurrency(r.costoRealeCliente)}). Il calcolo include degrado annuo (${r.degradoAnnua}%) e inflazione (${r.inflazioneAnnua}%).`);
+                // Spiegazione aggiornata con O&M
+                drawExplanationBox(`Tempo di Rientro: È il numero di anni necessari affinché i benefici totali netti (risparmi + guadagni - costi O&M) eguaglino il costo reale dell'investimento (${formatCurrency(r.costoRealeCliente)}).`);
                 
                 // --- SEZIONE 6: GRAFICO ---
                 checkPageBreak(80); 
@@ -824,7 +895,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.addImage(chartImgData, 'PNG', margin, cursorY, usableWidth, chartHeight);
                 cursorY += chartHeight + sectionSpacing;
 
-                // --- SEZIONE 7: TABELLA PIANO DI RIENTRO ---
+                // --- SEZIONE 7: TABELLA PIANO DI RIENTRO (MODIFICATA) ---
                 checkPageBreak(50); 
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(h2Size);
@@ -834,7 +905,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const tableX = margin;
                 const tableY = cursorY;
-                const colWidths = [20, (usableWidth-20)/4, (usableWidth-20)/4, (usableWidth-20)/4, (usableWidth-20)/4];
+                // Col Wdiths aggiornate per 6 colonne
+                const colWidths = [18, (usableWidth-18)/5, (usableWidth-18)/5, (usableWidth-18)/5, (usableWidth-18)/5, (usableWidth-18)/5];
                 let currentX = tableX;
 
                 pdf.setFillColor(colorBgLight);
@@ -843,14 +915,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFontSize(smallSize);
                 pdf.setTextColor(colorTextGray);
 
-                pdf.text('ANNO', currentX + 5, tableY + 7);
+                pdf.text('ANNO', currentX + 3, tableY + 7);
                 currentX += colWidths[0];
                 pdf.text('RISPARMIO', currentX + 5, tableY + 7);
                 currentX += colWidths[1];
-                pdf.text('GUADAGNO (RID+CER)', currentX + 5, tableY + 7);
+                pdf.text('GUADAGNO', currentX + 5, tableY + 7);
                 currentX += colWidths[2];
-                pdf.text('FLUSSO DI CASSA', currentX + 5, tableY + 7);
+                pdf.text('COSTI O&M', currentX + 5, tableY + 7); // Nuova Colonna
                 currentX += colWidths[3];
+                pdf.text('FLUSSO NETTO', currentX + 5, tableY + 7); // Nome aggiornato
+                currentX += colWidths[4];
                 pdf.text('CUMULATO', currentX + 5, tableY + 7);
                 
                 cursorY += 10;
@@ -873,26 +947,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         pdf.rect(tableX, cursorY, usableWidth, rowHeight, 'F');
                     }
 
-                    pdf.text(cells[0].innerText, currentX + 5, cursorY + 6);
+                    // Cella 1 (Anno)
+                    pdf.text(cells[0].innerText, currentX + 3, cursorY + 6);
                     currentX += colWidths[0];
+                    // Cella 2 (Risparmio)
                     pdf.text(cells[1].innerText, currentX + 5, cursorY + 6);
                     currentX += colWidths[1];
+                    // Cella 3 (Guadagno)
                     pdf.text(cells[2].innerText, currentX + 5, cursorY + 6);
                     currentX += colWidths[2];
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.setTextColor(colorGreen);
+                    // Cella 4 (O&M) - Nuova
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setTextColor(colorRed);
                     pdf.text(cells[3].innerText, currentX + 5, cursorY + 6);
                     currentX += colWidths[3];
-                    let cumulatoValue = parseFloat(cells[4].innerText.replace(/[^0-9,-]+/g,"").replace('.','').replace(',', '.'));
-                    pdf.setTextColor(cumulatoValue < 0 ? colorRed : colorIndigo);
+                    // Cella 5 (Flusso)
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(colorGreen);
                     pdf.text(cells[4].innerText, currentX + 5, cursorY + 6);
-                    
+                    currentX += colWidths[4];
+                    // Cella 6 (Cumulato)
+                    pdf.setFont('helvetica', 'bold');
+                    let cumulatoValue = parseFloat(cells[5].innerText.replace(/[^0-9,-]+/g,"").replace('.','').replace(',', '.'));
+                    pdf.setTextColor(cumulatoValue < 0 ? colorRed : colorIndigo);
+                    pdf.text(cells[5].innerText, currentX + 5, cursorY + 6);
+
                     pdf.setFont('helvetica', 'normal');
                     pdf.setTextColor(colorTextDark);
                     cursorY += rowHeight;
                 }
                 
-                pdf.save('SolarisFlow-Riepilogo.pdf');
+                pdf.save(`SolarisFlow-Riepilogo-${clientName.replace(/ /g, '_')}.pdf`);
 
             } catch (err) {
                 console.error("Errore durante l'esportazione PDF vettoriale:", err);
@@ -908,6 +993,8 @@ document.addEventListener('DOMContentLoaded', () => {
          */
         function saveState() {
             const state = {
+                clientName: inClientName.value,
+                clientAddress: inClientAddress.value,
                 consumoF1: inConsumoF1.value,
                 consumoF2: inConsumoF2.value,
                 consumoF3: inConsumoF3.value,
@@ -921,6 +1008,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 costiFissiBolletta: inCostiFissi.value,
                 inflazioneAnnua: inInflazione.value,
                 degradoAnnua: inDegrado.value,
+                costoManutenzione: inCostoManutenzione.value,
+                costoSostituzioneInverter: inCostoSostituzioneInverter.value,
+                annoSostituzioneInverter: inAnnoSostituzioneInverter.value,
                 percPnrr: inPercPNRR.value,
                 tariffaCer: inTariffaCER.value,
                 percEnergiaCondivisaCer: inPercCondivisa.value,
@@ -935,6 +1025,8 @@ document.addEventListener('DOMContentLoaded', () => {
         function loadState() {
             const state = JSON.parse(localStorage.getItem('solarisFlowState'));
             if (state) {
+                inClientName.value = state.clientName || defaultValues['client-name'];
+                inClientAddress.value = state.clientAddress || defaultValues['client-address'];
                 inConsumoF1.value = state.consumoF1 || defaultValues['consumo-f1'];
                 inConsumoF2.value = state.consumoF2 || defaultValues['consumo-f2'];
                 inConsumoF3.value = state.consumoF3 || defaultValues['consumo-f3'];
@@ -948,12 +1040,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 inCostiFissi.value = state.costiFissiBolletta || defaultValues['costi-fissi-bolletta'];
                 inInflazione.value = state.inflazioneAnnua || defaultValues['inflazione-annua'];
                 inDegrado.value = state.degradoAnnua || defaultValues['degrado-annuo'];
+                inCostoManutenzione.value = state.costoManutenzione || defaultValues['costo-manutenzione-annua'];
+                inCostoSostituzioneInverter.value = state.costoSostituzioneInverter || defaultValues['costo-sostituzione-inverter'];
+                inAnnoSostituzioneInverter.value = state.annoSostituzioneInverter || defaultValues['anno-sostituzione-inverter'];
                 inPercPNRR.value = state.percPnrr || defaultValues['perc-pnrr'];
                 inTariffaCER.value = state.tariffaCer || defaultValues['tariffa-cer'];
                 inPercCondivisa.value = state.percEnergiaCondivisaCer || defaultValues['perc-energia-condivisa-cer'];
                 inPrezzoRID.value = state.prezzoRid || defaultValues['prezzo-rid'];
             } else {
-                allInputs.forEach(input => {
+                // Se non c'è stato, carica i default
+                allNumberInputs.forEach(input => {
+                    input.value = defaultValues[input.id];
+                });
+                allTextInputs.forEach(input => {
                     input.value = defaultValues[input.id];
                 });
             }
@@ -968,14 +1067,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirm("Sei sicuro di voler resettare tutti i campi ai valori di default?")) {
                 localStorage.removeItem('solarisFlowState');
                 
-                allInputs.forEach(input => {
+                allNumberInputs.forEach(input => {
                     input.value = defaultValues[input.id];
                     input.classList.remove('input-invalid', 'input-valid');
+                });
+                 allTextInputs.forEach(input => {
+                    input.value = defaultValues[input.id];
+                    input.classList.remove('input-invalid');
                 });
 
                 calcoliEseguiti = false;
                 pdfResults = {};
-                tableBody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-500">Inserisci i dati e calcola per vedere i risultati.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-500">Inserisci i dati e calcola per vedere i risultati.</td></tr>';
                 outSituazioneConsumo.textContent = '- kWh';
                 outSituazioneCosto.textContent = '- €';
                 outPanoPotenza.textContent = '- kWp';
@@ -1063,11 +1166,17 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleDetailsBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
 
-        allInputs.forEach(input => {
+        // Event listener per tutti gli input (sia numerici che testo)
+        allNumberInputs.forEach(input => {
             input.addEventListener('input', () => {
                 validateInputs();
                 updateRecommendations();
                 saveState();
+            });
+        });
+         allTextInputs.forEach(input => {
+            input.addEventListener('input', () => {
+                saveState(); // I campi testo salvano solo lo stato, non triggerano ricalcoli
             });
         });
         

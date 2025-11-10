@@ -73,6 +73,19 @@
         .input-valid {
             border-color: #10b981 !important;
         }
+        /* Stile per input text (client-name) */
+        input[type="text"] {
+             border-radius: 6px;
+            border-width: 1px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            border-color: #d1d5db; /* gray-300 */
+        }
+        input[type="text"]:focus {
+            --tw-ring-color: #4f46e5; /* indigo-500 */
+            border-color: #4f46e5;
+        }
+        
         .container {
             max-width: 1280px;
         }
@@ -94,6 +107,16 @@
             font-size: 1.5rem;
             font-weight: 600;
             letter-spacing: -0.025em;
+        }
+        /* Titolo sottosezione per O&M */
+        h3.subsection-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #4b5563; /* gray-600 */
+            border-bottom: 1px solid #e5e7eb; /* gray-200 */
+            padding-bottom: 0.5rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
         }
         label {
             font-size: 0.875rem;
@@ -203,8 +226,17 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <form id="calculator-form" class="lg:col-span-1 space-y-8">
                 <div class="bg-white p-8 rounded-xl shadow-md">
-                    <h2 class="text-2xl font-semibold mb-6 text-indigo-600">1. Dati Cliente (Bolletta)</h2>
+                    <h2 class="text-2xl font-semibold mb-6 text-indigo-600">1. Dati Cliente</h2>
                     <div class="space-y-4">
+                        <div>
+                            <label for="client-name" class="block text-sm font-medium text-gray-700 mb-1">Nome Cliente (per PDF)</label>
+                            <input type="text" id="client-name" placeholder="Es. Mario Rossi" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="client-address" class="block text-sm font-medium text-gray-700 mb-1">Indirizzo (per PDF)</label>
+                            <input type="text" id="client-address" placeholder="Es. Via Roma 1, 20100 Milano" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <h3 class="subsection-title !mt-6">Dati Bolletta</h3>
                         <div>
                             <label for="consumo-f1" class="block text-sm font-medium text-gray-700 mb-1">Consumo Annuo F1 (kWh)</label>
                             <input type="number" id="consumo-f1" value="1500" min="0" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
@@ -276,6 +308,7 @@
                 <div class="bg-white p-8 rounded-xl shadow-md">
                     <h2 class="text-2xl font-semibold mb-6 text-indigo-600">5. Parametri Finanziari</h2>
                     <div class="space-y-4">
+                        <h3 class="subsection-title">Parametri Economici</h3>
                         <div>
                             <label for="costo-energia" class="block text-sm font-medium text-gray-700 mb-1">Costo Quota Energia (€/kWh)</label>
                             <input type="number" id="costo-energia" value="0.25" min="0" step="0.01" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
@@ -289,14 +322,30 @@
                         <div>
                             <label for="inflazione-annua" class="block text-sm font-medium text-gray-700 mb-1">Inflazione Annua (%)</label>
                             <input type="number" id="inflazione-annua" value="2" min="0" max="10" step="0.1" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Inflazione stimata per i prezzi dell'energia.</small>
+                            <small class="text-xs text-gray-500">Inflazione stimata per i prezzi dell'energia e O&M.</small>
                         </div>
                         <div>
                             <label for="degrado-annuo" class="block text-sm font-medium text-gray-700 mb-1">Degrado Produzione Annua (%)</label>
                             <input type="number" id="degrado-annuo" value="0.5" min="0" max="2" step="0.1" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
                             <small class="text-xs text-gray-500">Degrado stimato della produzione PV.</small>
                         </div>
-                    </div>
+
+                        <h3 class="subsection-title">Costi O&M (Manutenzione)</h3>
+                        <div>
+                            <label for="costo-manutenzione-annua" class="block text-sm font-medium text-gray-700 mb-1">Costo Manutenzione Annua (€)</label>
+                            <input type="number" id="costo-manutenzione-annua" value="100" min="0" step="10" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <small class="text-xs text-gray-500">Es. pulizia, controllo (verrà indicizzato all'inflazione).</small>
+                        </div>
+                         <div>
+                            <label for="costo-sostituzione-inverter" class="block text-sm font-medium text-gray-700 mb-1">Costo Sostituzione Inverter (€)</label>
+                            <input type="number" id="costo-sostituzione-inverter" value="1500" min="0" step="100" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                         <div>
+                            <label for="anno-sostituzione-inverter" class="block text-sm font-medium text-gray-700 mb-1">Anno Sostituzione Inverter</label>
+                            <input type="number" id="anno-sostituzione-inverter" value="12" min="1" max="25" step="1" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <small class="text-xs text-gray-500">Anno in cui si prevede di sostituire l'inverter (es. 12).</small>
+                        </div>
+                        </div>
                 </div>
                 <div class="bg-white p-8 rounded-xl shadow-md">
                     <h2 class="text-2xl font-semibold mb-6 text-indigo-600">6. Incentivi (PNRR + CER)</h2>
@@ -409,7 +458,7 @@
                         </div>
                         <div>
                             <span class="block text-xs font-medium text-gray-500 uppercase">Totale Benefici 1° Anno</span>
-                            <p id="panoramica-totale-anno1" class="text-xl font-bold text-green-600">- €</p>
+                            <p id="panoramica-totale-anno1" class="text-xl font-bold text-green-600">- €</a:key>
                         </div>
                     </div>
                 </div>
@@ -417,17 +466,17 @@
                     <div class="bg-white p-8 rounded-xl shadow-md text-center">
                         <h3 class="text-sm font-medium text-gray-500 uppercase mb-2">Tempo di Rientro</h3>
                         <p id="payback-result" class="text-4xl font-bold text-indigo-600">-</p>
-                        <small class="text-gray-500">Anni</small>
+                        <small class="text-gray-500">Anni (include O&M)</small>
                     </div>
                     <div class="bg-white p-8 rounded-xl shadow-md text-center">
                         <h3 class="text-sm font-medium text-gray-500 uppercase mb-2">Beneficio 1° Anno</h3>
                         <p id="benefit-result" class="text-4xl font-bold text-green-600">-</p>
-                        <small class="text-gray-500">Euro</small>
+                        <small class="text-gray-500">Euro (netto O&M)</small>
                     </div>
                     <div class="bg-white p-8 rounded-xl shadow-md text-center">
                         <h3 class="text-sm font-medium text-gray-500 uppercase mb-2">Guadagno a 25 Anni</h3>
                         <p id="total-gain-result" class="text-4xl font-bold text-gray-900">-</p>
-                        <small class="text-gray-500">Euro</small>
+                        <small class="text-gray-500">Euro (netto O&M)</small>
                     </div>
                 </div>
                 <div class="bg-white p-8 rounded-xl shadow-md">
@@ -445,13 +494,14 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Anno</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risparmio</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guadagno (RID+CER)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costi (O&M)</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flusso di Cassa</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cumulato</th>
                                 </tr>
                             </thead>
                             <tbody id="payback-table-body" class="bg-white divide-y divide-gray-200">
                                 <tr>
-                                    <td colspan="5" class="p-6 text-center text-gray-500">Inserisci i dati e calcola per vedere i risultati.</td>
+                                    <td colspan="6" class="p-6 text-center text-gray-500">Inserisci i dati e calcola per vedere i risultati.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -463,7 +513,7 @@
             <p>&copy; 2025 SolarisFlow - Prototipo. Non costituisce consulenza finanziaria.</p>
         </footer>
     </div>
-
+    
     <script src="app.js" defer></script>
 </body>
 </html>
