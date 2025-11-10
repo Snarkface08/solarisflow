@@ -1,11 +1,12 @@
 const CACHE_NAME = 'solarisflow-v1';
 const urlsToCache = [
   '/',
-  '/index.html',  // Rinomina il tuo file HTML in index.html
+  '/index.html',
+  'app.js', // <-- Aggiunto il nuovo file JavaScript
   'https://cdn.tailwindcss.com',
   'https://cdn.jsdelivr.net/npm/chart.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+  // <-- Rimosso 'html2canvas.min.js' perché non è più usato
 ];
 
 self.addEventListener('install', event => {
