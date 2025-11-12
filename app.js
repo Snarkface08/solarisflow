@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const inCostiFissi = document.getElementById('costi-fissi-bolletta');
         const inInflazione = document.getElementById('inflazione-annua');
         const inDegrado = document.getElementById('degrado-annuo');
+        const inSimulazioneAnni = document.getElementById('simulazione-anni'); // <-- NUOVO
         
         // Input O&M (NUOVI)
         const inCostoManutenzione = document.getElementById('costo-manutenzione-annua');
@@ -65,6 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const kpiPayback = document.getElementById('payback-result');
         const kpiBenefit = document.getElementById('benefit-result');
         const kpiTotalGain = document.getElementById('total-gain-result');
+        const outTotalGainLabel = document.getElementById('total-gain-label'); // <-- NUOVO
+        const outTableTitle = document.getElementById('table-title'); // <-- NUOVO
+        const outPaybackTableTitle = document.getElementById('payback-table-title'); // <-- NUOVO
 
         // Pulsanti
         const calculateBtn = document.getElementById('calculate-btn');
@@ -95,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'accumulo-installato': '0', 'costo-totale-impianto': '12000',
             'costo-energia': '0.25', 'costi-fissi-bolletta': '120',
             'inflazione-annua': '2', 'degrado-annuo': '0.5',
+            'simulazione-anni': '20', // <-- NUOVO (default 20 anni)
             'costo-manutenzione-annua': '100', 'costo-sostituzione-inverter': '1500', 'anno-sostituzione-inverter': '12',
             'perc-pnrr': '40', 'tariffa-cer': '0.11',
             'perc-energia-condivisa-cer': '70', 'prezzo-rid': '0.08'
@@ -132,17 +137,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const guadagnoImmissione = guadagnoRID + guadagnoCER;
             const totaleBeneficiPrimoAnno = risparmioAutoconsumo + guadagnoImmissione;
 
-            // 4. Simulazione 25 Anni
+            // 4. Simulazione (MODIFICATA)
             let flussoCumulato = -costoRealeCliente;
             let tempoDiRientro = -1;
             let beneficioPrimoAnno = 0;
-            const anniSimulazione = 25;
+            const anniSimulazione = inputs.anniSimulazione; // <-- MODIFICATO (da 25 a dinamico)
             
             const paybackPlan = [];
             const chartLabels = [0];
             const chartData = [flussoCumulato];
 
-            for (let anno = 1; anno <= anniSimulazione; anno++) {
+            for (let anno = 1; anno <= anniSimulazione; anno++) { // <-- Loop ora dinamico
                 const fattoreDegrado = Math.pow(1 - inputs.degradoAnnua, anno - 1);
                 const fattoreInflazione = Math.pow(1 + inputs.inflazioneAnnua, anno - 1);
                 
@@ -182,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 chartData.push(flussoCumulato);
             }
 
-            // 5. Costruzione Oggetto Risultati
+            // 5. Costruzione Oggetto Risultati (MODIFICATO)
             return {
                 // Dati Situazione Attuale
                 consumoTotale,
@@ -208,7 +213,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Dati KPI Principali
                 tempoDiRientro,
                 beneficioPrimoAnno,
-                guadagnoTotale25Anni: flussoCumulato,
+                guadagnoTotaleSimulazione: flussoCumulato, // <-- MODIFICATO (rinominato da guadagnoTotale25Anni)
+                anniSimulazione, // <-- NUOVO (per UI)
                 
                 // Dati per Tabella e Grafico
                 paybackPlan,
@@ -265,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 prezzoRID: parseFloat(inPrezzoRID.value) || 0,
                 inflazioneAnnua: (parseFloat(inInflazione.value) / 100) || 0,
                 degradoAnnua: (parseFloat(inDegrado.value) / 100) || 0.005,
+                anniSimulazione: parseInt(inSimulazioneAnni.value) || 20, // <-- NUOVO
                 // Input O&M
                 costoManutenzione: parseFloat(inCostoManutenzione.value) || 0,
                 costoSostituzioneInverter: parseFloat(inCostoSostituzioneInverter.value) || 0,
@@ -296,10 +303,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Massimale PNRR
             outMassimaleApplicato.textContent = `${results.massimale_kwp_dinamico.toLocaleString('it-IT')} €/kW (su ${results.potenzaPerCalcoloPNRR.toFixed(1)} kW)`;
 
-            // KPI
-            kpiPayback.textContent = results.tempoDiRientro > 0 ? `${results.tempoDiRientro.toFixed(1)}` : "> 25";
+            // KPI (MODIFICATI)
+            kpiPayback.textContent = results.tempoDiRientro > 0 ? `${results.tempoDiRientro.toFixed(1)}` : `> ${results.anniSimulazione}`; // <-- MODIFICATO
             kpiBenefit.textContent = `${results.beneficioPrimoAnno.toFixed(0)}`;
-            kpiTotalGain.textContent = `${results.guadagnoTotale25Anni.toFixed(0)}`;
+            kpiTotalGain.textContent = `${results.guadagnoTotaleSimulazione.toFixed(0)}`; // <-- MODIFICATO
+            
+            // Etichette Dinamiche (NUOVE)
+            outTotalGainLabel.textContent = `Guadagno a ${results.anniSimulazione} Anni`;
+            outTableTitle.textContent = `Flusso di Cassa (${results.anniSimulazione} Anni)`;
+            outPaybackTableTitle.textContent = `Piano di Rientro (${results.anniSimulazione} Anni)`;
 
             // Tabella e Grafico
             updatePaybackTable(results.paybackPlan);
@@ -388,6 +400,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let isValid = true;
             allNumberInputs.forEach(input => {
                 input.classList.remove('input-invalid', 'input-valid');
+                // MODIFICA: l'anno sostituzione inverter può essere 0 (per non sostituire)
+                if (input.id === 'anno-sostituzione-inverter' && parseFloat(input.value) === 0) {
+                     input.classList.add('input-valid');
+                     return; // Salta il resto della validazione per questo campo se è 0
+                }
+                
                 if (input.min && parseFloat(input.value) < parseFloat(input.min)) {
                     input.classList.add('input-invalid');
                     isValid = false;
@@ -498,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <ul>
                         <li>Inflazione Annua: ${r.inflazioneAnnua}%</li>
                         <li>Degrado Annua Produzione: ${r.degradoAnnua}%</li>
-                        <li>Costo Manutenzione Annua (Base): ${r.costoManutenzione.toFixed(2)} €</li>
+                        <li>Durata Simulazione: ${r.anniSimulazione} anni</li> <li>Costo Manutenzione Annua (Base): ${r.costoManutenzione.toFixed(2)} €</li>
                         <li>Costo Sostituzione Inverter (Base): ${r.costoSostituzioneInverter.toFixed(2)} € (all'anno ${r.annoSostituzioneInverter})</li>
                     </ul>
                 `;
@@ -639,7 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFontSize(bodySize);
                 pdf.setTextColor(colorTextGray);
                 // Testo intro aggiornato con O&M
-                let introText = `Simulazione basata su: Inflazione ${r.inflazioneAnnua.toFixed(1)}%, Degrado ${r.degradoAnnua.toFixed(1)}%. Costi di manutenzione inclusi.`;
+                let introText = `Simulazione a ${r.anniSimulazione} anni basata su: Inflazione ${r.inflazioneAnnua.toFixed(1)}%, Degrado ${r.degradoAnnua.toFixed(1)}%. Costi di manutenzione inclusi.`; // <-- MODIFICATO
                 let splitIntro = pdf.splitTextToSize(introText, usableWidth);
                 pdf.text(splitIntro, margin, cursorY);
                 cursorY += (splitIntro.length * (lineSpacing * 0.7)) + sectionSpacing;
@@ -843,7 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 drawExplanationBox(`Benefici: Il risparmio deriva dall'energia prodotta e consumata (${r.kwhAutoconsumati.toFixed(0)} kWh). Il guadagno deriva dall'energia immessa (${r.kwhImmessi.toFixed(0)} kWh). I costi O&M (${formatCurrency(r.costoManutenzione)}) sono già stati sottratti.`);
 
-                // --- SEZIONE 5: TEMPO DI RIENTRO ---
+                // --- SEZIONE 5: TEMPO DI RIENTRO (MODIFICATA) ---
                 checkPageBreak(cardHeight + sectionSpacing);
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(h2Size);
@@ -862,7 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFontSize(h2Size);
                 pdf.setFont('helvetica', 'bold');
                 pdf.setTextColor(colorIndigo);
-                pdf.text(r.tempoDiRientro > 0 ? `${r.tempoDiRientro.toFixed(1)} Anni` : '> 25 Anni', margin + cardPadding, cardY + 18);
+                pdf.text(r.tempoDiRientro > 0 ? `${r.tempoDiRientro.toFixed(1)} Anni` : `> ${r.anniSimulazione} Anni`, margin + cardPadding, cardY + 18); // <-- MODIFICATO
 
                 pdf.setFillColor(colorBgSummaryGreen);
                 pdf.setDrawColor(colorBorderSummaryGreen);
@@ -870,11 +888,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFontSize(smallSize);
                 pdf.setFont('helvetica', 'normal');
                 pdf.setTextColor(colorTextGray);
-                pdf.text('GUADAGNO NETTO A 25 ANNI', margin + cardWidth + cardSpacing + cardPadding, cardY + 8);
+                pdf.text(`GUADAGNO NETTO A ${r.anniSimulazione} ANNI`, margin + cardWidth + cardSpacing + cardPadding, cardY + 8); // <-- MODIFICATO
                 pdf.setFontSize(h2Size);
                 pdf.setFont('helvetica', 'bold');
                 pdf.setTextColor(colorGreen);
-                pdf.text(formatCurrency(r.guadagnoTotale25Anni), margin + cardWidth + cardSpacing + cardPadding, cardY + 18);
+                pdf.text(formatCurrency(r.guadagnoTotaleSimulazione), margin + cardWidth + cardSpacing + cardPadding, cardY + 18); // <-- MODIFICATO
 
                 cursorY = cardY + cardHeight + sectionSpacing;
 
@@ -900,7 +918,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(h2Size);
                 pdf.setTextColor(colorTextDark);
-                pdf.text('Piano di Rientro (25 Anni)', margin, cursorY);
+                pdf.text(`Piano di Rientro (${r.anniSimulazione} Anni)`, margin, cursorY); // <-- MODIFICATO
                 cursorY += lineSpacing + 2;
 
                 const tableX = margin;
@@ -1008,6 +1026,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 costiFissiBolletta: inCostiFissi.value,
                 inflazioneAnnua: inInflazione.value,
                 degradoAnnua: inDegrado.value,
+                simulazioneAnni: inSimulazioneAnni.value, // <-- NUOVO
                 costoManutenzione: inCostoManutenzione.value,
                 costoSostituzioneInverter: inCostoSostituzioneInverter.value,
                 annoSostituzioneInverter: inAnnoSostituzioneInverter.value,
@@ -1040,6 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 inCostiFissi.value = state.costiFissiBolletta || defaultValues['costi-fissi-bolletta'];
                 inInflazione.value = state.inflazioneAnnua || defaultValues['inflazione-annua'];
                 inDegrado.value = state.degradoAnnua || defaultValues['degrado-annuo'];
+                inSimulazioneAnni.value = state.simulazioneAnni || defaultValues['simulazione-anni']; // <-- NUOVO
                 inCostoManutenzione.value = state.costoManutenzione || defaultValues['costo-manutenzione-annua'];
                 inCostoSostituzioneInverter.value = state.costoSostituzioneInverter || defaultValues['costo-sostituzione-inverter'];
                 inAnnoSostituzioneInverter.value = state.annoSostituzioneInverter || defaultValues['anno-sostituzione-inverter'];
@@ -1050,15 +1070,20 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // Se non c'è stato, carica i default
                 allNumberInputs.forEach(input => {
-                    input.value = defaultValues[input.id];
+                    if (defaultValues[input.id]) { // Controlla se esiste un default per questo ID
+                        input.value = defaultValues[input.id];
+                    }
                 });
                 allTextInputs.forEach(input => {
-                    input.value = defaultValues[input.id];
+                    if (defaultValues[input.id]) {
+                        input.value = defaultValues[input.id];
+                    }
                 });
             }
             updateRecommendations();
             validateInputs();
         }
+
 
         /**
          * Resetta il form e tutti i risultati ai valori di default.
@@ -1067,15 +1092,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirm("Sei sicuro di voler resettare tutti i campi ai valori di default?")) {
                 localStorage.removeItem('solarisFlowState');
                 
-                allNumberInputs.forEach(input => {
-                    input.value = defaultValues[input.id];
-                    input.classList.remove('input-invalid', 'input-valid');
-                });
-                 allTextInputs.forEach(input => {
-                    input.value = defaultValues[input.id];
-                    input.classList.remove('input-invalid');
-                });
+                // Ricarica i valori di default (incluso il nuovo campo)
+                loadState(); 
 
+                // Pulisci UI
                 calcoliEseguiti = false;
                 pdfResults = {};
                 tableBody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-500">Inserisci i dati e calcola per vedere i risultati.</td></tr>';
@@ -1093,6 +1113,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 kpiPayback.textContent = '-';
                 kpiBenefit.textContent = '-';
                 kpiTotalGain.textContent = '-';
+                
+                // Resetta le etichette dinamiche ai default
+                const defaultAnni = defaultValues['simulazione-anni'];
+                outTotalGainLabel.textContent = `Guadagno a ${defaultAnni} Anni`;
+                outTableTitle.textContent = `Flusso di Cassa (${defaultAnni} Anni)`;
+                outPaybackTableTitle.textContent = `Piano di Rientro (${defaultAnni} Anni)`;
+                
                 outMassimaleApplicato.textContent = '- €/kW';
 
                 if (paybackChart) {
@@ -1101,10 +1128,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 detailsSection.classList.add('hidden');
-                updateRecommendations();
+                // updateRecommendations(); // Già chiamato da loadState()
                 document.getElementById('calculator-form').scrollIntoView({ behavior: 'smooth' });
             }
         }
+
 
         // --- 5. GESTORI DI EVENTI (Il "Controllore") ---
 
@@ -1184,6 +1212,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Carica dati salvati o default
         loadState();
+        
+        // Inizializza le etichette dinamiche
+        const defaultAnni = defaultValues['simulazione-anni'];
+        outTotalGainLabel.textContent = `Guadagno a ${defaultAnni} Anni`;
+        outTableTitle.textContent = `Flusso di Cassa (${defaultAnni} Anni)`;
+        outPaybackTableTitle.textContent = `Piano di Rientro (${defaultAnni} Anni)`;
+
 
         // Registrazione Service Worker
         if ('serviceWorker' in navigator) {
