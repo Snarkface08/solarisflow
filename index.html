@@ -14,7 +14,10 @@
     <link rel="icon" href="icons/icon-192x192.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <script src="lib/jspdf.umd.min.js"></script>
+    <script src="lib/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -30,12 +33,43 @@
             border-radius: 0 6px 6px 0;
         }
         .calcoli-dettaglio-content ul {
-            list-style-type: disc;
-            list-style-position: inside;
+            list-style-type: none; /* Rimuoviamo i bullet points per un elenco personalizzato */
             padding-left: 0;
             margin-bottom: 1.25rem;
             font-size: 0.875rem;
             color: #4b5563;
+        }
+        /* Stile per i nuovi dettagli calcoli */
+        .calcoli-dettaglio-content li {
+            position: relative;
+            padding-left: 1.5rem; /* Spazio per l'icona */
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid #f3f4f6;
+            padding-bottom: 0.75rem;
+        }
+        .calcoli-dettaglio-content li:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .calcoli-dettaglio-content li::before {
+            content: '✓'; /* Icona di spunta */
+            position: absolute;
+            left: 0;
+            top: 2px;
+            color: #10b981; /* Verde */
+            font-weight: 700;
+        }
+        .calcoli-dettaglio-content li span {
+            display: block;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .calcoli-dettaglio-content li small {
+            display: block;
+            font-size: 0.8rem;
+            color: #6b7280;
+            font-style: italic;
         }
         .calcoli-dettaglio-content h4 {
             font-size: 1.125rem;
@@ -51,17 +85,6 @@
             font-weight: 700;
             color: #111827;
         }
-        #pdf-export-wrapper {
-            position: absolute;
-            left: -9999px;
-            top: 0;
-            width: 210mm;
-            padding: 20mm 15mm;
-            background-color: white;
-            color: #333;
-            font-size: 10pt;
-            line-height: 1.6;
-        }
         .app-logo {
             font-size: 2.5rem;
             margin-right: 0.5rem;
@@ -73,16 +96,16 @@
         .input-valid {
             border-color: #10b981 !important;
         }
-        /* Stile per input text (client-name) */
-        input[type="text"] {
+        input[type="text"], select {
              border-radius: 6px;
             border-width: 1px;
             padding: 0.5rem 0.75rem;
             font-size: 0.875rem;
-            border-color: #d1d5db; /* gray-300 */
+            border-color: #d1d5db;
+            background-color: #fff;
         }
-        input[type="text"]:focus {
-            --tw-ring-color: #4f46e5; /* indigo-500 */
+        input[type="text"]:focus, select:focus {
+            --tw-ring-color: #4f46e5;
             border-color: #4f46e5;
         }
         
@@ -108,12 +131,11 @@
             font-weight: 600;
             letter-spacing: -0.025em;
         }
-        /* Titolo sottosezione per O&M */
         h3.subsection-title {
             font-size: 1rem;
             font-weight: 600;
-            color: #4b5563; /* gray-600 */
-            border-bottom: 1px solid #e5e7eb; /* gray-200 */
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
             padding-bottom: 0.5rem;
             margin-top: 1.5rem;
             margin-bottom: 1rem;
@@ -137,117 +159,97 @@
             border-left-width: 4px;
             border-radius: 12px;
         }
-        .text-3xl {
-            font-size: 1.875rem;
-            font-weight: 700;
-        }
-        .text-xl {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-        .text-lg {
-            font-size: 1.125rem;
-        }
-        .uppercase {
-            letter-spacing: 0.05em;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-        footer p {
-            font-size: 0.875rem;
-            color: #9ca3af;
-        }
+        .text-3xl { font-size: 1.875rem; font-weight: 700; }
+        .text-xl { font-size: 1.25rem; font-weight: 600; }
+        .text-lg { font-size: 1.125rem; }
+        .uppercase { letter-spacing: 0.05em; font-size: 0.75rem; font-weight: 500; }
+        footer p { font-size: 0.875rem; color: #9ca3af; }
 
-        /* Stili per i nuovi pulsanti */
-        #calculate-btn, #toggle-details-btn, #hide-details-btn-bottom, #export-pdf-btn, #reset-btn {
-            border-radius: 8px;
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            line-height: 1.5rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        #calculate-btn, #toggle-details-btn, #hide-details-btn-bottom, #export-summary-pdf-btn, #export-details-pdf-btn, #reset-btn {
+            border-radius: 8px; padding: 0.75rem 1.5rem; font-size: 1rem; line-height: 1.5rem;
+            font-weight: 600; transition: all 0.2s ease; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             text-align: center;
         }
-
-        #calculate-btn {
-            background-color: #1a1a1a;
-            color: white;
-            border: 1px solid #1a1a1a;
-        }
-        #calculate-btn:hover {
-            background-color: #333333;
-            border-color: #333333;
-        }
-
-        #toggle-details-btn, #hide-details-btn-bottom {
-            background-color: transparent;
-            color: #1a1a1a;
-            border: 1px solid #d1d5db;
-        }
-        #toggle-details-btn:hover, #hide-details-btn-bottom:hover {
-            background-color: #f9fafb;
-            border-color: #9ca3af;
-        }
+        #calculate-btn { background-color: #1a1a1a; color: white; border: 1px solid #1a1a1a; }
+        #calculate-btn:hover { background-color: #333333; border-color: #333333; }
+        #toggle-details-btn, #hide-details-btn-bottom { background-color: transparent; color: #1a1a1a; border: 1px solid #d1d5db; }
+        #toggle-details-btn:hover, #hide-details-btn-bottom:hover { background-color: #f9fafb; border-color: #9ca3af; }
         
-        #export-pdf-btn {
+        /* BOTTONE ESPORTA RIEPILOGO (EX ESPORTA PDF) */
+        #export-summary-pdf-btn {
             background-color: #2dd4bf;
             color: #1a1a1a;
             border: 1px solid #2dd4bf;
         }
-        #export-pdf-btn:hover {
+        #export-summary-pdf-btn:hover {
             background-color: #14b8a6;
             border-color: #14b8a6;
             color: white;
         }
+        
+        /* NUOVO BOTTONE DETTAGLI */
+        #export-details-pdf-btn {
+            background-color: #f9fafb;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+         #export-details-pdf-btn:hover {
+            background-color: #f3f4f6;
+            border-color: #9ca3af;
+        }
 
-        #reset-btn {
-            background-color: transparent;
-            color: #ef4444;
-            border: 1px solid #ef4444;
-        }
-        #reset-btn:hover {
-            background-color: #fef2f2;
-        }
+        #reset-btn { background-color: transparent; color: #ef4444; border: 1px solid #ef4444; }
+        #reset-btn:hover { background-color: #fef2f2; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
-    <div id="pdf-export-wrapper" style="height:1px; overflow:hidden;">
-        <div id="pdf-export-content">
-             </div>
-    </div>
+
     <div class="container mx-auto p-6 sm:p-10">
         <header class="text-center mb-12">
             <h1 class="text-4xl font-bold text-indigo-600 flex items-center justify-center">
                 <span class="app-logo text-5xl">☀️</span>SolarisFlow
             </h1>
-            <p class="text-xl text-gray-500 mt-3">Analisi professionale di progetto e rientro finanziario per impianti fotovoltaici</p>
+            <p class="text-xl text-gray-500 mt-3">Simulatore Ingegneristico e Finanziario per Impianti Fotovoltaici</p>
         </header>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <form id="calculator-form" class="lg:col-span-1 space-y-8">
+                
                 <div class="bg-white p-8 rounded-xl shadow-md">
                     <h2 class="text-2xl font-semibold mb-6 text-indigo-600">1. Dati Cliente</h2>
                     <div class="space-y-4">
                         <div>
                             <label for="client-name" class="block text-sm font-medium text-gray-700 mb-1">Nome Cliente (per PDF)</label>
-                            <input type="text" id="client-name" placeholder="Es. Mario Rossi" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="text" id="client-name" placeholder="Es. Mario Rossi" class="w-full">
                         </div>
                         <div>
                             <label for="client-address" class="block text-sm font-medium text-gray-700 mb-1">Indirizzo (per PDF)</label>
-                            <input type="text" id="client-address" placeholder="Es. Via Roma 1, 20100 Milano" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="text" id="client-address" placeholder="Es. Via Roma 1, 20100 Milano" class="w-full">
                         </div>
-                        <h3 class="subsection-title !mt-6">Dati Bolletta</h3>
+                        
+                        <h3 class="subsection-title !mt-6">Profilo Consumi</h3>
+                        <div>
+                            <label for="profilo-consumo" class="block text-sm font-medium text-gray-700 mb-1">Tipologia Utenza (Stagionalità)</label>
+                            <select id="profilo-consumo" class="w-full p-3 border border-gray-300 rounded-md bg-white">
+                                <option value="costante">Residenziale - Consumo Costante</option>
+                                <option value="picco_invernale">Residenziale - Picco Invernale (Risc.)</option>
+                                <option value="picco_estivo">Residenziale - Picco Estivo (A/C)</option>
+                                <option value="doppio_picco">Residenziale - Doppio Picco (Risc. + A/C)</option>
+                                <option value="ufficio">Commerciale - Ufficio</option>
+                                <option value="ristorazione">Commerciale - Ristorazione/Hotel</option>
+                            </select>
+                            <small class="text-xs text-gray-500">Influenza la distribuzione mensile dei consumi.</small>
+                        </div>
                         <div>
                             <label for="consumo-f1" class="block text-sm font-medium text-gray-700 mb-1">Consumo Annuo F1 (kWh)</label>
-                            <input type="number" id="consumo-f1" value="1500" min="0" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="number" id="consumo-f1" value="1500" min="0" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                         <div>
                             <label for="consumo-f2" class="block text-sm font-medium text-gray-700 mb-1">Consumo Annuo F2 (kWh)</label>
-                            <input type="number" id="consumo-f2" value="1800" min="0" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="number" id="consumo-f2" value="1800" min="0" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                         <div>
                             <label for="consumo-f3" class="block text-sm font-medium text-gray-700 mb-1">Consumo Annuo F3 (kWh)</label>
-                            <input type="number" id="consumo-f3" value="1700" min="0" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="number" id="consumo-f3" value="1700" min="0" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                         <div class="mt-4 p-3 recommendation-output">
                             <span class="block text-sm font-medium text-gray-700">Consumo Annuo Totale:</span>
@@ -255,21 +257,32 @@
                         </div>
                     </div>
                 </div>
+                
                 <div class="bg-white p-8 rounded-xl shadow-md">
-                    <h2 class="text-2xl font-semibold mb-6 text-indigo-600">2. Parametri Progetto</h2>
+                    <h2 class="text-2xl font-semibold mb-6 text-indigo-600">2. Parametri Ingegneristici</h2>
                     <div class="space-y-4">
                         <div>
-                            <label for="produzione-kwh-kwp" class="block text-sm font-medium text-gray-700 mb-1">Produzione Annua Stimata (kWh/kWp)</label>
-                            <input type="number" id="produzione-kwh-kwp" value="1300" min="0" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Es. 1200 Nord, 1400 Centro, 1600 Sud.</small>
+                            <label for="area-geografica" class="block text-sm font-medium text-gray-700 mb-1">Area Geografica</label>
+                            <select id="area-geografica" class="w-full p-3 border border-gray-300 rounded-md bg-white">
+                                <option value="nord">Nord Italia</option>
+                                <option value="centro" selected>Centro Italia</option>
+                                <option value="sud">Sud Italia e Isole</option>
+                            </select>
+                            <small class="text-xs text-gray-500">Determina il profilo di produzione Terna.</small>
                         </div>
                         <div>
-                            <label for="autoconsumo-perc-desiderata" class="block text-sm font-medium text-gray-700 mb-1">% Autoconsumo Obiettivo</label>
-                            <input type="number" id="autoconsumo-perc-desiderata" value="60" min="0" max="100" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Obiettivo % di produzione da autoconsumare.</small>
+                            <label for="potenza-pv-installata" class="block text-sm font-medium text-gray-700 mb-1">Potenza Pannelli (kWp)</label>
+                            <input type="number" id="potenza-pv-installata" value="6" min="0.1" step="0.1" class="w-full p-3 border border-gray-300 rounded-md">
+                            <small class="text-xs text-gray-500">Potenza di picco totale dei moduli.</small>
+                        </div>
+                        <div>
+                            <label for="potenza-inverter-installato" class="block text-sm font-medium text-gray-700 mb-1">Potenza Nominale Inverter (kW)</label>
+                            <input type="number" id="potenza-inverter-installato" value="6" min="0.1" step="0.1" class="w-full p-3 border border-gray-300 rounded-md">
+                            <small class="text-xs text-gray-500">Potenza di uscita AC dell'inverter.</small>
                         </div>
                     </div>
                 </div>
+
                 <div class="bg-white p-8 rounded-xl shadow-md">
                     <h2 class="text-2xl font-semibold mb-6 text-indigo-600">3. Progetto Consigliato</h2>
                     <div class="space-y-4">
@@ -277,87 +290,95 @@
                             <span class="block text-sm font-medium text-gray-700">Potenza PV Consigliata:</span>
                             <span id="potenza-consigliata-result" class="text-lg text-indigo-700">- kWp</span>
                         </div>
+                         <div class="recommendation-output p-3">
+                            <span class="block text-sm font-medium text-gray-700">Produzione Annua Stimata:</span>
+                            <span id="produzione-consigliata-result" class="text-lg text-indigo-700">- kWh</span>
+                        </div>
                         <div class="recommendation-output p-3">
-                            <span class="block text-sm font-medium text-gray-700">Accumulo Consigliato:</span>
-                            <span id="accumulo-consigliato-result" class="text-lg text-indigo-700">-</span>
+                            <span class="block text-sm font-medium text-gray-700">Accumulo (Fabbisogno di Picco):</span>
+                            <span id="accumulo-consigliato-result" class="text-lg text-indigo-700">- kWh</span>
                         </div>
                         <small id="accumulo-consigliato-ragione" class="text-xs text-gray-600 block"></small>
                     </div>
                 </div>
+                
                 <div class="bg-white p-8 rounded-xl shadow-md">
                     <h2 class="text-2xl font-semibold mb-6 text-indigo-600">4. Dati Impianto Finale</h2>
                     <div class="space-y-4">
                         <div>
-                            <label for="potenza-pv-installata" class="block text-sm font-medium text-gray-700 mb-1">Potenza PV Installata (kWp)</label>
-                            <input type="number" id="potenza-pv-installata" value="6" min="0" step="0.1" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <label for="costo-totale-impianto" class="block text-sm font-medium text-gray-700 mb-1">Costo Totale Impianto (€)</label>
+                            <input type="number" id="costo-totale-impianto" value="12000" min="0" step="100" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
-                        <div>
-                            <label for="potenza-inverter-installato" class="block text-sm font-medium text-gray-700 mb-1">Potenza Inverter Installata (kW)</label>
-                            <input type="number" id="potenza-inverter-installato" value="6" min="0" step="0.1" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                        <h3 class="subsection-title">Configurazione Accumulo</h3>
+                         <div>
+                            <label for="tipo-sistema" class="block text-sm font-medium text-gray-700 mb-1">Tipo di Sistema</label>
+                            <select id="tipo-sistema" class="w-full p-3 border border-gray-300 rounded-md bg-white">
+                                <option value="standard-ac" selected>Standard (Batteria in AC)</option>
+                                <option value="ibrido-dc">Ibrido (Batteria in DC)</option>
+                            </select>
+                            <small class="text-xs text-gray-500">Importante per la stima del clipping.</small>
                         </div>
                         <div>
                             <label for="accumulo-installato" class="block text-sm font-medium text-gray-700 mb-1">Accumulo Installato (kWh)</label>
-                            <input type="number" id="accumulo-installato" value="0" min="0" step="0.5" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="number" id="accumulo-installato" value="0" min="0" step="0.5" class="w-full p-3 border border-gray-300 rounded-md">
+                            <small class="text-xs text-gray-500">Lasciare 0 per impianto senza accumulo.</small>
                         </div>
-                        <div>
-                            <label for="costo-totale-impianto" class="block text-sm font-medium text-gray-700 mb-1">Costo Totale Impianto (€)</label>
-                            <input type="number" id="costo-totale-impianto" value="12000" min="0" step="100" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                         <div>
+                            <label for="efficienza-batteria" class="block text-sm font-medium text-gray-700 mb-1">Efficienza Round-Trip Batteria (%)</label>
+                            <input type="number" id="efficienza-batteria" value="85" min="50" max="100" class="w-full p-3 border border-gray-300 rounded-md">
+                            <small class="text-xs text-gray-500">Efficienza totale (carica/scarica). Default 85%.</small>
                         </div>
                     </div>
                 </div>
+
                 <div class="bg-white p-8 rounded-xl shadow-md">
                     <h2 class="text-2xl font-semibold mb-6 text-indigo-600">5. Parametri Finanziari</h2>
                     <div class="space-y-4">
-                        <h3 class="subsection-title">Parametri Economici</h3>
+                        <h3 class="subsection-title">Parametri Economici e Simulazione</h3>
                         <div>
                             <label for="costo-energia" class="block text-sm font-medium text-gray-700 mb-1">Costo Quota Energia (€/kWh)</label>
-                            <input type="number" id="costo-energia" value="0.25" min="0" step="0.01" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Inserire solo la quota variabile (es. 0.25).</small>
+                            <input type="number" id="costo-energia" value="0.25" min="0.01" step="0.01" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                         <div>
                             <label for="costi-fissi-bolletta" class="block text-sm font-medium text-gray-700 mb-1">Costi Fissi Bolletta (€/Anno)</label>
-                            <input type="number" id="costi-fissi-bolletta" value="120" min="0" step="10" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Es. Quota potenza, canone, oneri fissi (es. 120€).</small>
+                            <input type="number" id="costi-fissi-bolletta" value="120" min="0" step="10" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                         <div>
                             <label for="inflazione-annua" class="block text-sm font-medium text-gray-700 mb-1">Inflazione Annua (%)</label>
-                            <input type="number" id="inflazione-annua" value="2" min="0" max="10" step="0.1" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Inflazione stimata per i prezzi dell'energia e O&M.</small>
+                            <input type="number" id="inflazione-annua" value="2" min="0" max="10" step="0.1" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                         <div>
                             <label for="degrado-annuo" class="block text-sm font-medium text-gray-700 mb-1">Degrado Produzione Annua (%)</label>
-                            <input type="number" id="degrado-annuo" value="0.5" min="0" max="2" step="0.1" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Degrado stimato della produzione PV.</small>
+                            <input type="number" id="degrado-annuo" value="0.5" min="0" max="2" step="0.1" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
-
                         <div>
                             <label for="simulazione-anni" class="block text-sm font-medium text-gray-700 mb-1">Durata Simulazione (Anni)</label>
-                            <input type="number" id="simulazione-anni" value="20" min="10" max="40" step="1" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Durata del piano di rientro (default: 20 anni per CER).</small>
+                            <input type="number" id="simulazione-anni" value="20" min="10" max="40" step="1" class="w-full p-3 border border-gray-300 rounded-md">
+                            <small class="text-xs text-gray-500">Default: 20 anni (durata incentivo CER).</small>
                         </div>
                         <h3 class="subsection-title">Costi O&M (Manutenzione)</h3>
                         <div>
                             <label for="costo-manutenzione-annua" class="block text-sm font-medium text-gray-700 mb-1">Costo Manutenzione Annua (€)</label>
-                            <input type="number" id="costo-manutenzione-annua" value="100" min="0" step="10" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Es. pulizia, controllo (verrà indicizzato all'inflazione).</small>
+                            <input type="number" id="costo-manutenzione-annua" value="100" min="0" step="10" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                          <div>
                             <label for="costo-sostituzione-inverter" class="block text-sm font-medium text-gray-700 mb-1">Costo Sostituzione Inverter (€)</label>
-                            <input type="number" id="costo-sostituzione-inverter" value="1500" min="0" step="100" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="number" id="costo-sostituzione-inverter" value="1500" min="0" step="100" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                          <div>
                             <label for="anno-sostituzione-inverter" class="block text-sm font-medium text-gray-700 mb-1">Anno Sostituzione Inverter</label>
-                            <input type="number" id="anno-sostituzione-inverter" value="12" min="1" max="25" step="1" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Anno in cui si prevede di sostituire l'inverter (es. 12).</small>
+                            <input type="number" id="anno-sostituzione-inverter" value="12" min="0" max="40" step="1" class="w-full p-3 border border-gray-300 rounded-md">
+                            <small class="text-xs text-gray-500">Mettere 0 per non simulare la sostituzione.</small>
                         </div>
-                        </div>
+                    </div>
                 </div>
+
                 <div class="bg-white p-8 rounded-xl shadow-md">
                     <h2 class="text-2xl font-semibold mb-6 text-indigo-600">6. Incentivi (PNRR + CER)</h2>
                     <div class="space-y-4">
                         <div>
                             <label for="perc-pnrr" class="block text-sm font-medium text-gray-700 mb-1">% Fondo Perduto PNRR</label>
-                            <input type="number" id="perc-pnrr" value="40" min="0" max="100" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="number" id="perc-pnrr" value="40" min="0" max="100" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                         <div class="p-3 recommendation-output">
                             <span class="block text-sm font-medium text-gray-700">Massimale PNRR Applicato:</span>
@@ -365,28 +386,43 @@
                         </div>
                         <div>
                             <label for="tariffa-cer" class="block text-sm font-medium text-gray-700 mb-1">Tariffa Premio CER (€/kWh)</label>
-                            <input type="number" id="tariffa-cer" value="0.11" min="0" step="0.01" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="number" id="tariffa-cer" value="0.11" min="0" step="0.01" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                         <div>
                             <label for="perc-energia-condivisa-cer" class="block text-sm font-medium text-gray-700 mb-1">% Energia Immersa Condivisa (CER)</label>
-                            <input type="number" id="perc-energia-condivisa-cer" value="70" min="0" max="100" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <small class="text-xs text-gray-500">Stima % energia immessa che viene condivisa nella CER.</small>
+                            <input type="number" id="perc-energia-condivisa-cer" value="70" min="0" max="100" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                         <div>
                             <label for="prezzo-rid" class="block text-sm font-medium text-gray-700 mb-1">Prezzo Ritiro Dedicato (RID) (€/kWh)</label>
-                            <input type="number" id="prezzo-rid" value="0.08" min="0" step="0.01" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="number" id="prezzo-rid" value="0.08" min="0" step="0.01" class="w-full p-3 border border-gray-300 rounded-md">
                         </div>
                     </div>
                 </div>
+
                 <div class="bg-white p-8 rounded-xl shadow-md space-y-4">
                     <button type="button" id="calculate-btn" class="w-full">
                         Calcola Analisi
                     </button>
-                    <button type="button" id="export-pdf-btn" class="w-full">
-                        Esporta PDF
+                    
+                    <h3 class="subsection-title !mb-0 !mt-2 text-center">Esporta Report</h3>
+                    
+                    <div class="flex items-center">
+                        <input id="include-details-in-summary" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                        <label for="include-details-in-summary" class="ml-2 block text-sm text-gray-700">Includi Dettagli Tecnici nel Riepilogo</label>
+                    </div>
+
+                    <button type="button" id="export-summary-pdf-btn" class="w-full">
+                        Esporta Riepilogo Cliente
                     </button>
+                    
+                    <button type="button" id="export-details-pdf-btn" class="w-full">
+                        Esporta Solo Dettagli Tecnici
+                    </button>
+                    
+                    <hr class="my-4">
+
                     <button type="button" id="toggle-details-btn" class="w-full">
-                        Dettaglio Calcoli
+                        Mostra Dettaglio Calcoli
                     </button>
                     <button type="button" id="reset-btn" class="w-full">
                         Reset Dati
@@ -430,8 +466,9 @@
                             <p id="panoramica-accumulo" class="text-xl font-bold text-gray-900">- kWh</p>
                         </div>
                         <div>
-                            <span class="block text-xs font-medium text-gray-500 uppercase">Produzione Annua</span>
+                            <span class="block text-xs font-medium text-gray-500 uppercase">Produzione Annua Netta</span>
                             <p id="panoramica-produzione" class="text-xl font-bold text-gray-900">- kWh</p>
+                            <small id="panoramica-produzione-nota" class="text-xs text-gray-500"></small>
                         </div>
                     </div>
                     <hr class="my-6 border-gray-200">
@@ -479,13 +516,13 @@
                         <small class="text-gray-500">Euro (netto O&M)</small>
                     </div>
                     <div class="bg-white p-8 rounded-xl shadow-md text-center">
-                        <h3 id="total-gain-label" class="text-sm font-medium text-gray-500 uppercase mb-2">Guadagno a 25 Anni</h3>
+                        <h3 id="total-gain-label" class="text-sm font-medium text-gray-500 uppercase mb-2">Guadagno a 20 Anni</h3>
                         <p id="total-gain-result" class="text-4xl font-bold text-gray-900">-</p>
                         <small class="text-gray-500">Euro (netto O&M)</small>
                     </div>
                 </div>
                 <div class="bg-white p-8 rounded-xl shadow-md">
-                    <h2 id="table-title" class="text-2xl font-semibold mb-6 text-gray-800">Piano di Rientro (25 Anni)</h2>
+                    <h2 id="table-title" class="text-2xl font-semibold mb-6 text-gray-800">Piano di Rientro (20 Anni)</h2>
                     <div class="h-96 w-full">
                         <canvas id="payback-chart"></canvas>
                     </div>
