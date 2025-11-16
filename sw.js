@@ -1,4 +1,4 @@
-const CACHE_NAME = 'solarisflow-v5'; // <-- Versione 5!
+const CACHE_NAME = 'solarisflow-v6'; // <-- Versione 6!
 const urlsToCache = [
   '/',
   '/index.html',
@@ -16,7 +16,18 @@ self.addEventListener('install', event => {
   );
 });
 
+// *** QUESTA SEZIONE È STATA MODIFICATA ***
 self.addEventListener('fetch', event => {
+  const requestUrl = new URL(event.request.url);
+
+  // Se la richiesta è per un dominio diverso (CDN, Google Fonts, ecc.)
+  if (requestUrl.origin !== self.location.origin) {
+    // Lascia che sia il browser a gestirla, senza passare dalla cache.
+    // Non usiamo event.respondWith()
+    return;
+  }
+
+  // Se la richiesta è per il nostro dominio (file locali)
   event.respondWith(
     caches.match(event.request).then(response => {
       // Restituisci dalla cache o vai alla rete
@@ -25,7 +36,7 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Pulisce le vecchie cache
+// Pulisce le vecchie cache (v1, v2, v3, v4, v5)
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
